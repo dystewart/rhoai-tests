@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+commonLabels:
+  app: minio_bucket_storage
+resources:
+- deployment.yaml
+- create-ds-connections-job.yaml
+- create-minio-buckets-job.yaml
+- create-root-server-job.yaml
+- pvc.yaml
+- rolebinding.yaml
+- minio-console-route.yaml
+- minio-api-route.yaml
+- serviceaccount.yaml
+- service.yaml

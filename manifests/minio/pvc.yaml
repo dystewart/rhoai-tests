@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: rhoai-test-minio
+    app.kubernetes.io/component: minio
+    app.kubernetes.io/instance: minio
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/part-of: minio
+    component: minio
+  name: rhoai-test-minio
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
