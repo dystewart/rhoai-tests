@@ -1,0 +1,187 @@
+apiVersion: kubeflow.org/v1
+kind: Notebook
+metadata:
+  annotations:
+    notebooks.opendatahub.io/inject-oauth: "true"
+    notebooks.opendatahub.io/last-size-selection: Small
+    notebooks.opendatahub.io/oauth-logout-url: https://rhods-dashboard-redhat-ods-applications.apps.ocp-test.nerc.mghpcc.org/projects/test?notebookLogout=rhoai-test-fraud-detection
+    opendatahub.io/accelerator-name: nvidia-a100-gpu
+    opendatahub.io/image-display-name: TensorFlow
+    opendatahub.io/username: kube:admin
+    openshift.io/description: Workbench for hosting RHOAI
+    openshift.io/display-name: RHOAI Test Fraud Detection
+  labels:
+    app: rhoai-test-fraud-detection
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/odh-managed: "true"
+    opendatahub.io/user: kube-3aadmin
+  name: rhoai-test-fraud-detection
+  namespace: test
+spec:
+  template:
+    spec:
+      affinity: {}
+      containers:
+      - env:
+        - name: NOTEBOOK_ARGS
+          value: |-
+            --ServerApp.port=8888
+                              --ServerApp.token=''
+                              --ServerApp.password=''
+                              --ServerApp.base_url=/notebook/test/rhoai-test-fraud-detection
+                              --ServerApp.quit_button=False
+                              --ServerApp.tornado_settings={"user":"kube-3aadmin","hub_host":"https://rhods-dashboard-redhat-ods-applications.apps.ocp-test.nerc.mghpcc.org","hub_prefix":"/projects/test"}
+        - name: JUPYTER_IMAGE
+          value: quay.io/repository/dystewar/rhoai-test/tensorflow
+        - name: PIPELINES_SSL_SA_CERTS
+          value: /etc/pki/tls/custom-certs/ca-bundle.crt
+        - name: GIT_SSL_CAINFO
+          value: /etc/pki/tls/custom-certs/ca-bundle.crt
+        - name: PIP_CERT
+          value: /etc/pki/tls/custom-certs/ca-bundle.crt
+        - name: REQUESTS_CA_BUNDLE
+          value: /etc/pki/tls/custom-certs/ca-bundle.crt
+        - name: SSL_CERT_FILE
+          value: /etc/pki/tls/custom-certs/ca-bundle.crt
+        envFrom:
+        - secretRef:
+            name: aws-connection-pipeline-artifacts
+        image: quay
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /notebook/test/rhoai-test-fraud-detection/api
+            port: notebook-port
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: rhoai-test-fraud-detection
+        ports:
+        - containerPort: 8888
+          name: notebook-port
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /notebook/test/rhoai-test-fraud-detection/api
+            port: notebook-port
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "2"
+            memory: 8Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "1"
+            memory: 8Gi
+            nvidia.com/gpu: "1"
+        volumeMounts:
+        - mountPath: /opt/app-root/src
+          name: rhoai-test-fraud-detection
+        - mountPath: /opt/app-root/runtimes
+          name: elyra-dsp-details
+        - mountPath: /dev/shm
+          name: shm
+        - mountPath: /etc/pki/tls/custom-certs/ca-bundle.crt
+          name: trusted-ca
+          readOnly: true
+          subPath: ca-bundle.crt
+        workingDir: /opt/app-root/src
+      - args:
+        - --provider=openshift
+        - --https-address=:8443
+        - --http-address=
+        - --openshift-service-account=rhoai-test-fraud-detection
+        - --cookie-secret-file=/etc/oauth/config/cookie_secret
+        - --cookie-expire=24h0m0s
+        - --tls-cert=/etc/tls/private/tls.crt
+        - --tls-key=/etc/tls/private/tls.key
+        - --upstream=http://localhost:8888
+        - --upstream-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        - --email-domain=*
+        - --skip-provider-button
+        - --openshift-sar={"verb":"get","resource":"notebooks","resourceAPIGroup":"kubeflow.org","resourceName":"rhoai-test-fraud-detection","namespace":"$(NAMESPACE)"}
+        - --logout-url=https://rhods-dashboard-redhat-ods-applications.apps.ocp-test.nerc.mghpcc.org/projects/test?notebookLogout=rhoai-test-fraud-detection
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: quay.io/repository/dystewar/rhoai-test/tensorflow
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /oauth/healthz
+            port: oauth-proxy
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: oauth-proxy
+        ports:
+        - containerPort: 8443
+          name: oauth-proxy
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /oauth/healthz
+            port: oauth-proxy
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: 100m
+            memory: 64Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+        volumeMounts:
+        - mountPath: /etc/oauth/config
+          name: oauth-config
+        - mountPath: /etc/tls/private
+          name: tls-certificates
+      enableServiceLinks: false
+      serviceAccountName: rhoai-test-fraud-detection
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu.product
+        operator: Equal
+        value: NVIDIA-A100-SXM4-40GB
+      volumes:
+      - name: rhoai-test-fraud-detection
+        persistentVolumeClaim:
+          claimName: rhoai-test-fraud-detection
+      - name: elyra-dsp-details
+        secret:
+          secretName: ds-pipeline-config
+      - emptyDir:
+          medium: Memory
+        name: shm
+      - configMap:
+          items:
+          - key: ca-bundle.crt
+            path: ca-bundle.crt
+          name: workbench-trusted-ca-bundle
+          optional: true
+        name: trusted-ca
+      - name: oauth-config
+        secret:
+          defaultMode: 420
+          secretName: rhoai-test-fraud-detection-oauth-config
+      - name: tls-certificates
+        secret:
+          defaultMode: 420
+          secretName: rhoai-test-fraud-detection-tls
