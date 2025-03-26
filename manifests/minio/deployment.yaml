@@ -62,6 +62,6 @@ spec:
       volumes:
       - name: minio
         persistentVolumeClaim:
-          claimName: minio
+          claimName: rhoai-test-minio
       - emptyDir: {}
         name: empty
